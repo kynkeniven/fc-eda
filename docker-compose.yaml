@@ -1,26 +1,59 @@
 version: '3'
 
 services:
-  goapp: 
-    build: .
+  go-ms:
+    container_name: goapp
+    build: goapp
     platform: linux/amd64
     volumes:
-      - .:/app
+      - ./goapp:/app
+    command: [ "go", "run", "cmd/walletcore/main.go" ]
     ports:
       - 8080:8080
+  
+  java-ms:
+    container_name: javaapp
+    build: javaapp
+    platform: linux/amd64
+    volumes:
+      - ./javaapp:/app
+    #command: ["mvn", "spring-boot:run", "-Dspring-boot.run.profiles=dev"]
+    ports:
+      - 3003:3003
+    depends_on:
+      - mysql2
 
   mysql:
+    container_name: mysql
     image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    restart: always
+    tty: true
     platform: linux/amd64
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: wallet
-      MYSQL_PASSWORD: root
     ports:
       - 3306:3306
     volumes:
       - .docker/mysql:/var/lib/mysql
-      - ./mysql-init-scripts:/docker-entrypoint-initdb.d
+      - ./mysql-walletcore-script:/docker-entrypoint-initdb.d
+
+  mysql2:
+    container_name: mysql2
+    image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    restart: always
+    tty: true
+    platform: linux/amd64
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: balances
+    ports:
+      - 3307:3306
+    volumes:
+      - .docker/mysql2:/var/lib/mysql
+      - ./mysql-microservice-script:/docker-entrypoint-initdb.d
 
   zookeeper:
     image: "confluentinc/cp-zookeeper:6.1.0"
@@ -73,4 +106,3 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
-  
